@@ -6,7 +6,7 @@ sock.bind((ip, 8080))  # 서버 아이피및 포트 지정 - tuple / 데이터�
 
 while True:
     msg = input("input:")  # test data
-    sock.sendto(msg.encode(), ('192.168.2.201', 7070))  # 문자열 인코딩 후 서버로 전송
+    sock.sendto(msg.encode(), ('192.168.0.29', 7070))  # 문자열 인코딩 후 서버로 전송
     # data, addr = sock.recvfrom(200)  # 데이터 수신 대기 (최대 200Byte)
     # # sock.sendto(data, addr)
     # print("Server is received data:", data.decode())  # 받은 데이터 출력
