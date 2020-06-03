@@ -77,9 +77,8 @@ def categorizing(pkt):
     except AttributeError as e:
         print(e)
 
-# cap = pyshark .LiveCapture(interface='2', bpf_filter = 'tcp or udp') #  ether proto 0x88B8
-cap = pyshark.FileCapture('D:/dev/react-web-app/hmi_template/server/packet/mms/fresh.pcap',
-                          display_filter="mms or goose")
+cap = pyshark .LiveCapture(interface='2', bpf_filter = 'tcp or udp') #  ether proto 0x88B8
+# cap = pyshark.FileCapture('D:/dev/react-web-app/hmi_template/server/packet/mms/fresh.pcap', display_filter="mms or goose")
 # , only_summaries=True ,  use_json=True, include_raw=True
 
 cap.apply_on_packets(categorizing)
