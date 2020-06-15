@@ -1,17 +1,17 @@
-import time
-import re
-from datetime import datetime, timedelta
-import pyshark
-import redis
-import json
-from crontab import CronTab
-from contextlib import suppress
-from collections import deque
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from multiprocessing import Process
+import time # 분류 시 timestamp 주기적 확인용
+import re # regex
+# from datetime import datetime, timedelta # timestamp 용
+import pyshark # packet 캡쳐
+import redis # redis 클라이언트
+import json # json parse
+# from crontab import CronTab # scheduling
+# from contextlib import suppress # 예외처리
+from collections import deque # circular buffer 구현용
+from apscheduler.schedulers.asyncio import AsyncIOScheduler # 비동기 scheduling
+# from multiprocessing import Process # 멀티 프로세스
 
-
-class Dictlist(dict):  # dictionary value 가 중복일 시 배열로 추가함
+# dictionary type, 중복된 key의 value를 배열로 추가
+class Dictlist(dict):
     def __setitem__(self, key, value):
         try:
             self[key]
@@ -19,7 +19,7 @@ class Dictlist(dict):  # dictionary value 가 중복일 시 배열로 추가함
             super(Dictlist, self).__setitem__(key, [])
         self[key].append(value)
 
-
+# mms report 처리 예시 클래스
 class Report(dict):
     def __init__(self, redis_conn):
         self.r = redis_conn
@@ -85,9 +85,9 @@ class RingBuffer(deque):
         """returns a list of size items (newest items)"""
         return list(self)
 
-
+# 실시간 패킷캡쳐 처리, 메인에서 실행
 class LiveCapture:
-    def __init__(self, buff, redis_connection):
+    def __init__(self, interface, buff, redis_connection):
         self.circular = buff
         self.rpt = Report(r)
         self.r = redis_connection
@@ -98,10 +98,11 @@ class LiveCapture:
         self.request = []
         self.response = []
         # 패킷 캡쳐 실행
-        cap = pyshark.LiveCapture(interface='3', bpf_filter='tcp and port 102')  # GOOSE - ether proto 0x88B8
+        cap = pyshark.LiveCapture(interface=f'{interface}', bpf_filter='tcp and port 102')  # GOOSE - ether proto 0x88B8
         # cap = pyshark.FileCapture('D:/dev/react-web-app/hmi_template/server/packet/mms/fresh.pcap', display_filter="mms or goose")
 
-        cap.apply_on_packets(self.save)  # 각 패킷마다 save 함수 시행   / callback, timeout, packet_count
+        # 각 패킷마다 save 함수 시행   / callback, timeout, packet_count
+        cap.apply_on_packets(self.save)
 
     def redisSetter(self, stamp, valueDict):
         # redis setter - timestamp 를 key 값으로 packet 값을 dictionary 로 redis 에 저장
@@ -168,7 +169,7 @@ class LiveCapture:
 
             # 버퍼가 특정 수 이상 쌓이면 크론 실행
             if len(self.circular.get()) == 10:
-                self.categorizing()
+                self.categorizing() # 분류 함수
 
             # except 처리 확인
             """
@@ -235,16 +236,10 @@ class LiveCapture:
             if len(compare_array) != 0:
                 print("Something remains... ", compare_array)
 
-        def rpt_cron():
-            print(self.rpt)
-
         # cron 으로 주기적으로 패킷 처리
         # .add_job(exec.add_job(exec_interval, 'interval', seconds=1)
         schedule.add_job(exec_cron, 'cron', second="*")  # 매 초 분류
-        # schedule.add_job(rpt_cron, 'cron', second="*/5")
         schedule.start()  # 시작
-
-        # exec_cron()
 
     @staticmethod
     def dictSetter(filt, diction, array):  # array ('key : value') each value  to dict
@@ -283,6 +278,7 @@ if __name__ == '__main__':
     # circular 버퍼
     mms_circular = RingBuffer(250)
     # stamp = datetime.utcnow().strftime('%y-%m-%d/%H:%M:%S.%f')[:]
+
     # r_keys = r.keys("packet-20-05-27/02:38:*") #  keys 비효율적
 
     # 주기적(cron)으로  regex에 맞춰 저장된 패킷 확인하기
@@ -298,6 +294,7 @@ if __name__ == '__main__':
     # list = [{'key': pkt.key, 'timestamp': pkt.timestamp} for pkt in circular.get()]
     # print(list)
     # print(circular.get())
-    LiveCapture(mms_circular, r)
+    if_number = input("Input interface number: ")
+    LiveCapture(if_number, mms_circular, r)  # interface 번호, 링버퍼, redis 연결
     # 최대 사이즈의 절반이상 이면 시작
     # 주기적으로 이전 마지막 timestamp 이후의 값들만 처리
