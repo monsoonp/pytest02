@@ -9,6 +9,7 @@ import redis
 
 r = redis.Redis(host="localhost", port=6379, db=0)
 
+
 # value를 배열로 넣어 key가 중복일 시 추가
 class Dictlist(dict):
     def __setitem__(self, key, value):
@@ -49,18 +50,18 @@ def categorizing(pkt):
         # print([pt.rstrip() for pt in str(pkt).split("\r\n")])
 
         mainArray = str(pkt.mms).replace("\t", "").split("\r\n")
-
         ethArray = str(pkt.eth).replace("\t", "").split("\r\n")
+        # print(mainArray)
         dictSetter(mainDict, mainArray)
         dictSetter(ethDict, ethArray)
 
         mainDict["eth"] = ethDict
         mainDict["timestamp"] = stamp
 
-        print(mainDict)
         print(pkt)
+        print(mainDict)
         json_dict = json.dumps(mainDict, ensure_ascii=False,).encode("utf-8")
-        r.set("packet-"+stamp,json_dict)
+        r.set("packet-"+stamp, json_dict)
 
         try:
             pkt.ip
@@ -70,17 +71,18 @@ def categorizing(pkt):
         with suppress(AttributeError):
             print("ip: ", pkt.ip)
 
-
         # mms - negociatedParameterCBB : f100 하위 값
         #   1... .... = str1: True
         # 	.1.. .... = str2: True
     except AttributeError as e:
         print(e)
 
-cap = pyshark .LiveCapture(interface='2', bpf_filter = 'tcp or udp') #  ether proto 0x88B8
+
+# inerface id, 필터 설정 필요
+cap = pyshark.LiveCapture(interface='1', bpf_filter='tcp')  # mms - tcp, goose - ether proto 0x88B8
 # cap = pyshark.FileCapture('D:/dev/react-web-app/hmi_template/server/packet/mms/fresh.pcap', display_filter="mms or goose")
 # , only_summaries=True ,  use_json=True, include_raw=True
-
+# 각 패킷마다 콜백 처리
 cap.apply_on_packets(categorizing)
 
 # for pkt in cap.sniff_continuously():    # LiveCapture only
